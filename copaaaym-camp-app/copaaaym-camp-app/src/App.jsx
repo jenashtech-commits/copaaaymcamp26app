@@ -176,11 +176,10 @@ function Register({ go, toast, refresh }) {
   const validate = () => {
     const x = {};
     if (!f.name.trim()) x.name = "Enter the full name";
-    if (!f.age || +f.age < 5 || +f.age > 99) x.age = "Enter a valid age";
+    if (!f.age) x.age = "Select an age group";
     if (!f.gender) x.gender = "Select gender";
     if (!validPhone(f.phone)) x.phone = "Enter a valid phone number";
     if (!validEmail(f.email)) x.email = "Enter a valid email";
-    if (!f.area.trim()) x.area = "Enter the Area";
     if (!f.district.trim()) x.district = "Enter the district";
     setErr(x); return Object.keys(x).length === 0;
   };
@@ -190,7 +189,7 @@ function Register({ go, toast, refresh }) {
     setBusy(true);
     const rec = {
       id: uuidv4(),
-      name: f.name.trim(), age: +f.age, gender: f.gender, email: f.email,
+      name: f.name.trim(), age: f.age, gender: f.gender, email: f.email,
       phone: f.phone, area: f.area.trim(), district: f.district.trim(), assembly: f.assembly,
       allergy: f.allergy, emergency: f.emergency, registered_by: "Self",
     };
@@ -210,7 +209,13 @@ function Register({ go, toast, refresh }) {
       <Tilt className="form-card" max={3}>
         <Field label="Full name" req err={err.name}><input className="inp" value={f.name} onChange={set("name")} placeholder="e.g. Ama Mensah" /></Field>
         <div className="row2">
-          <Field label="Age" req err={err.age}><input className="inp" type="number" value={f.age} onChange={set("age")} placeholder="Years" /></Field>
+          <Field label="Age group" req err={err.age}>
+            <select className="inp" value={f.age} onChange={set("age")}>
+              <option value="">Select</option>
+              <option>13-19</option>
+              <option>20 and above</option>
+            </select>
+          </Field>
           <Field label="Gender" req err={err.gender}>
             <select className="inp" value={f.gender} onChange={set("gender")}>
               <option value="">Select</option><option>Male</option><option>Female</option>
@@ -220,10 +225,9 @@ function Register({ go, toast, refresh }) {
         <Field label="Phone number" req err={err.phone}><input className="inp" value={f.phone} onChange={set("phone")} placeholder="0XX XXX XXXX" /></Field>
         <Field label="Email" req err={err.email}><input className="inp" value={f.email} onChange={set("email")} placeholder="name@email.com" /></Field>
         <div className="row2">
-          <Field label="Area" req err={err.area}><input className="inp" value={f.area} onChange={set("area")} placeholder="e.g. Anyaa-Ablekuma" /></Field>
           <Field label="District" req err={err.district}><input className="inp" value={f.district} onChange={set("district")} placeholder="Your COP district" /></Field>
+          <Field label="Assembly / Local"><input className="inp" value={f.assembly} onChange={set("assembly")} placeholder="Optional" /></Field>
         </div>
-        <Field label="Assembly / Local"><input className="inp" value={f.assembly} onChange={set("assembly")} placeholder="Optional" /></Field>
         <Field label="Any allergy or medical note to take care of"><textarea className="inp" rows={2} value={f.allergy} onChange={set("allergy")} placeholder="e.g. peanut allergy, asthma — or leave blank" /></Field>
         <Field label="Emergency contact (name & phone)"><input className="inp" value={f.emergency} onChange={set("emergency")} placeholder="Optional" /></Field>
         <button className="btn btn-red full" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Complete registration"}</button>
@@ -238,7 +242,6 @@ const blankMember = () => ({ id: uid(), name: "", age: "", gender: "", phone: ""
 function Bulk({ go, toast, refresh }) {
   const [organizer, setOrganizer] = useState("");
   const [district, setDistrict] = useState("");
-  const [area, setArea] = useState(DEFAULT_AREA);
   const [rows, setRows] = useState([blankMember(), blankMember()]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -250,15 +253,14 @@ function Bulk({ go, toast, refresh }) {
 
   const submit = async () => {
     if (!organizer.trim()) return setErr("Enter your name (the person registering)");
-    if (!area.trim()) return setErr("Enter the Area");
     if (!district.trim()) return setErr("Enter the district");
     const valid = rows.filter((r) => r.name.trim() && r.age && r.gender && validPhone(r.phone));
     if (valid.length === 0) return setErr("Add at least one member with name, age, gender and phone");
     setErr(""); setBusy(true);
     const recs = valid.map((r) => ({
       id: uuidv4(),
-      name: r.name.trim(), age: +r.age, gender: r.gender, phone: r.phone,
-      email: r.email, allergy: r.allergy, area: area.trim(), district: district.trim(), assembly: "",
+      name: r.name.trim(), age: r.age, gender: r.gender, phone: r.phone,
+      email: r.email, allergy: r.allergy, area: DEFAULT_AREA, district: district.trim(), assembly: "",
       emergency: "", registered_by: `Bulk · ${organizer.trim()}`,
     }));
     try { await insertRegistrations(recs); }
@@ -275,9 +277,8 @@ function Bulk({ go, toast, refresh }) {
     <div className="page form-page">
       <Header go={go} title="Bulk register a district" />
       <Tilt className="form-card" max={2}>
-        <Field label="Your name (registering officer)" req><input className="inp" value={organizer} onChange={(e) => setOrganizer(e.target.value)} placeholder="e.g. District Youth Leader" /></Field>
         <div className="row2">
-          <Field label="Area" req><input className="inp" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Anyaa-Ablekuma" /></Field>
+          <Field label="Your name (registering officer)" req><input className="inp" value={organizer} onChange={(e) => setOrganizer(e.target.value)} placeholder="e.g. District Youth Leader" /></Field>
           <Field label="District" req><input className="inp" value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="One district for all below" /></Field>
         </div>
         <div className="bulk-head"><span>Members</span><button className="chip" onClick={add}>+ Add member</button></div>
@@ -286,7 +287,7 @@ function Bulk({ go, toast, refresh }) {
             <div className="bulk-row" key={r.id}>
               <div className="bulk-no">{i + 1}</div>
               <input className="inp sm" placeholder="Full name" value={r.name} onChange={(e) => setRow(r.id, "name", e.target.value)} />
-              <input className="inp sm w70" type="number" placeholder="Age" value={r.age} onChange={(e) => setRow(r.id, "age", e.target.value)} />
+              <select className="inp sm w90" value={r.age} onChange={(e) => setRow(r.id, "age", e.target.value)}><option value="">Age</option><option>13-19</option><option>20 and above</option></select>
               <select className="inp sm w90" value={r.gender} onChange={(e) => setRow(r.id, "gender", e.target.value)}><option value="">Sex</option><option>Male</option><option>Female</option></select>
               <input className="inp sm" placeholder="Phone" value={r.phone} onChange={(e) => setRow(r.id, "phone", e.target.value)} />
               <input className="inp sm" placeholder="Email (optional)" value={r.email} onChange={(e) => setRow(r.id, "email", e.target.value)} />
