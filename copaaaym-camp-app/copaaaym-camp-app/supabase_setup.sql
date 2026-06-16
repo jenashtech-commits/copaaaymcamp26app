@@ -34,7 +34,6 @@ create table if not exists public.registrations (
 
 -- 2. Lock the table down (Row Level Security)
 alter table public.registrations enable row level security;
-alter table public.registrations alter column age type text using age::text;
 
 -- 3. Anyone (even not logged in) may submit a registration
 drop policy if exists "anyone can register" on public.registrations;
